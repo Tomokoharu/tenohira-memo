@@ -1,0 +1,796 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#31524C">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="てのひらメモ">
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icon-192.png">
+<title>てのひらメモ</title>
+<style>
+:root{
+  --paper:#F2EDE4;
+  --card:#FFFFFF;
+  --ink:#302C27;
+  --sub:#8A8274;
+  --line:#E4DDD1;
+  --green:#31524C;
+  --green-soft:#E5EDEA;
+  --green-mid:#C4D8D3;
+  --terra:#B56A4E;
+  --terra-soft:#F2E4DC;
+  --gold:#9A7A3A;
+  --gold-soft:#F0E8D4;
+  --blue:#3F6E8C;
+  --blue-soft:#E6EEF2;
+  --r:16px;
+  --sh:0 1px 3px rgba(0,0,0,.05), 0 4px 14px rgba(0,0,0,.07);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;background:#1a1714;font-family:"Hiragino Sans","Hiragino Kaku Gothic ProN","YuGothic","Yu Gothic UI",-apple-system,sans-serif;color:var(--ink);}
+.device{width:390px;max-width:100vw;height:100vh;height:100dvh;margin:0 auto;background:var(--paper);position:relative;overflow:hidden;display:flex;flex-direction:column;}
+.screen{position:absolute;inset:0;display:flex;flex-direction:column;background:var(--paper);transform:translateX(100%);transition:transform .28s cubic-bezier(.25,.72,.3,1);pointer-events:none;z-index:2;}
+.screen.active{transform:translateX(0);pointer-events:auto;z-index:5;}
+.screen.prev{transform:translateX(-28%);z-index:1;}
+.screen.modal{transform:translateY(100%);transition:transform .32s cubic-bezier(.25,.8,.3,1);}
+.screen.modal.active{transform:translateY(0);}
+.screen.modal.prev{transform:translateY(0);}
+
+/* topbar */
+.topbar{flex-shrink:0;padding:16px 18px 12px;display:flex;align-items:center;gap:10px;background:var(--paper);}
+.topbar.lined{border-bottom:1px solid var(--line);}
+.backbtn{width:36px;height:36px;border-radius:50%;border:none;background:var(--green-soft);color:var(--green);font-size:20px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.closebtn{width:36px;height:36px;border-radius:50%;border:none;background:rgba(255,255,255,.18);color:#fff;font-size:18px;display:flex;align-items:center;justify-content:center;cursor:pointer;flex-shrink:0;}
+.topbar h1{flex:1;font-size:17px;font-weight:700;margin:0;text-align:center;}
+.topbar.has-back h1{margin-right:36px;}
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:32px;}
+::-webkit-scrollbar{display:none;}
+
+/* ── HOME ── */
+.home-eyebrow{padding:22px 20px 6px;font-size:11.5px;color:var(--terra);font-weight:700;letter-spacing:.1em;}
+.home-title{padding:0 20px 18px;font-size:24px;font-weight:800;letter-spacing:.01em;}
+.home-title span{color:var(--green);}
+.patient-card{margin:0 16px 12px;background:var(--card);border-radius:var(--r);padding:16px;box-shadow:var(--sh);display:flex;align-items:center;gap:14px;cursor:pointer;border:1px solid rgba(0,0,0,.04);}
+.av{width:48px;height:48px;border-radius:50%;background:var(--green-soft);color:var(--green);font-weight:700;font-size:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.patient-card .info{flex:1;min-width:0;}
+.patient-card .name{font-size:15px;font-weight:700;margin-bottom:3px;}
+.patient-card .onelineSummary{font-size:12px;color:var(--green);font-weight:600;margin-bottom:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.patient-card .place{font-size:11.5px;color:var(--sub);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.chev{color:#C8C0B4;font-size:20px;flex-shrink:0;}
+.section-label{padding:16px 20px 8px;font-size:12px;font-weight:700;color:var(--sub);letter-spacing:.06em;}
+.fab{position:absolute;right:18px;bottom:28px;width:58px;height:58px;border-radius:50%;background:var(--green);color:#fff;border:none;font-size:28px;display:flex;align-items:center;justify-content:center;box-shadow:0 6px 18px rgba(49,82,76,.38);cursor:pointer;z-index:6;}
+
+/* ── DETAIL ── */
+.patient-hero{padding:18px 18px 14px;display:flex;align-items:center;gap:14px;}
+.av-lg{width:56px;height:56px;border-radius:50%;background:var(--green-soft);color:var(--green);font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.hero-info .hname{font-size:18px;font-weight:800;margin-bottom:3px;}
+.hero-info .hsub{font-size:12px;color:var(--sub);}
+
+/* ★ 一言サマリー（3秒でわかる） */
+.summary-banner{margin:0 16px 14px;background:var(--green);border-radius:var(--r);padding:16px 18px;color:#fff;position:relative;overflow:hidden;}
+.summary-banner .sb-label{font-size:10px;font-weight:700;letter-spacing:.12em;opacity:.65;margin-bottom:6px;}
+.summary-banner .sb-text{font-size:16.5px;font-weight:800;line-height:1.5;}
+
+/* 訪問前チェックを見るボタン */
+.check-cta{margin:0 16px 16px;background:var(--terra);border-radius:var(--r);padding:16px 18px;display:flex;align-items:center;gap:12px;cursor:pointer;box-shadow:0 6px 16px rgba(181,106,78,.3);border:none;width:calc(100% - 32px);}
+.check-cta .cc-ic{font-size:26px;flex-shrink:0;}
+.check-cta .cc-txt{flex:1;text-align:left;color:#fff;}
+.check-cta .cc-txt .t1{font-size:14.5px;font-weight:800;}
+.check-cta .cc-txt .t2{font-size:11.5px;opacity:.85;margin-top:1px;}
+.check-cta .cc-arrow{color:#fff;font-size:20px;opacity:.8;}
+
+/* 施術の流れカード */
+.flow-card{margin:0 16px 14px;background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px;box-shadow:var(--sh);}
+.flow-card-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
+.flow-card-head .fc-label{font-size:12px;font-weight:700;color:var(--ink);}
+.flow-edit-btn{font-size:11.5px;font-weight:700;color:var(--green);background:var(--green-soft);border:none;border-radius:20px;padding:5px 12px;cursor:pointer;flex-shrink:0;}
+.flow-block{display:flex;gap:10px;padding:9px 0;}
+.flow-block:not(:last-child){border-bottom:1px solid var(--line);}
+.flow-block-ic{width:30px;height:30px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;}
+.flow-block-ic.f1{background:var(--blue-soft);}
+.flow-block-ic.f2{background:var(--green-soft);}
+.flow-block-ic.f3{background:var(--terra-soft);}
+.flow-block-ic.f4{background:var(--gold-soft);}
+.flow-block-body{flex:1;min-width:0;}
+.flow-block-label{font-size:10px;font-weight:700;color:var(--sub);letter-spacing:.04em;margin-bottom:2px;}
+.flow-block-txt{font-size:13px;line-height:1.55;}
+.flow-empty{font-size:12.5px;color:var(--sub);text-align:center;padding:10px 0;}
+
+/* 会話サポートカード */
+.talk-card{margin:0 16px 14px;background:var(--gold-soft);border:1px solid #E0D4B8;border-radius:var(--r);padding:14px 16px;}
+.talk-card .tc-label{font-size:12px;font-weight:700;color:var(--gold);margin-bottom:10px;}
+.talk-sub{font-size:10.5px;font-weight:700;color:#8A7038;margin:10px 0 5px;}
+.talk-sub:first-of-type{margin-top:0;}
+.talk-row{font-size:13px;line-height:1.6;color:var(--ink);margin-bottom:3px;}
+.family-row{font-size:13px;line-height:1.6;color:var(--ink);background:#fff;border-radius:10px;padding:9px 11px;margin-top:4px;}
+
+/* 記録リスト */
+.rec-label{padding:4px 18px 8px;font-size:12px;font-weight:700;color:var(--sub);letter-spacing:.06em;}
+.rec-card{margin:0 16px 10px;background:var(--card);border-radius:14px;padding:14px;box-shadow:var(--sh);border:1px solid rgba(0,0,0,.04);}
+.rec-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;}
+.rec-head .rdate{font-size:13px;font-weight:700;}
+.rec-head .rstaff{font-size:11px;color:var(--sub);}
+.rec-talk{font-size:12px;background:var(--gold-soft);border-radius:8px;padding:7px 10px;margin-bottom:7px;color:#6A5228;}
+.rec-talk::before{content:"💬 ";}
+.rec-body{font-size:12.5px;color:#504840;line-height:1.6;}
+.rec-foot{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+.pill{font-size:10.5px;background:var(--paper);border:1px solid var(--line);padding:3px 9px;border-radius:20px;color:var(--sub);}
+.pill.move{background:var(--green-soft);border-color:var(--green-mid);color:var(--green);}
+
+/* アクションボタン */
+.actions{padding:10px 16px 4px;display:flex;gap:10px;}
+.btn{flex:1;border:none;border-radius:14px;padding:13px 0;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+.btn.primary{background:var(--green);color:#fff;box-shadow:0 5px 14px rgba(49,82,76,.28);}
+.btn.outline{background:var(--card);color:var(--green);border:1.5px solid var(--green-mid);}
+.btn.ghost{background:transparent;color:var(--sub);border:1.5px solid var(--line);}
+.btn.w100{width:100%;}
+
+/* ── PRE-VISIT CHECK（訪問前チェック全画面） ── */
+.precheck{background:linear-gradient(180deg,#26443F 0%,#1F3A35 100%);color:#fff;}
+.precheck .topbar{background:transparent;}
+.precheck .pc-name{padding:2px 22px 4px;font-size:21px;font-weight:800;}
+.precheck .pc-sub{padding:0 22px 18px;font-size:12.5px;opacity:.65;}
+.pc-list{padding:0 18px;display:flex;flex-direction:column;gap:10px;}
+.pc-item{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:14px 16px;display:flex;align-items:center;gap:14px;}
+.pc-item .pc-ic{font-size:24px;flex-shrink:0;width:30px;text-align:center;}
+.pc-item .pc-txt{font-size:15px;font-weight:700;line-height:1.5;}
+.pc-item.warn{background:rgba(212,134,103,.22);border-color:rgba(212,134,103,.4);}
+.pc-footer{padding:22px;text-align:center;}
+.pc-footer .ready-btn{width:100%;padding:16px;border-radius:16px;border:none;background:#fff;color:var(--green);font-size:15px;font-weight:800;cursor:pointer;}
+
+/* ── FLOW EDIT ── */
+.flow-edit-intro{padding:12px 18px 0;font-size:12.5px;color:var(--sub);line-height:1.6;}
+.flow-edit-group{margin:14px 16px 0;}
+.flow-edit-group-label{font-size:11.5px;font-weight:700;color:var(--green);margin-bottom:6px;padding-left:2px;}
+.flow-edit-row{display:flex;align-items:center;gap:10px;background:var(--card);border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;}
+.flow-edit-input{flex:1;border:none;background:transparent;font-size:13.5px;font-family:inherit;color:var(--ink);padding:0;min-width:0;}
+.flow-edit-input:focus{outline:none;}
+.flow-edit-input::placeholder{color:#C0B8AE;}
+
+/* ── FORM ── */
+.form-body{padding:14px 18px 8px;}
+.fblock{margin-bottom:20px;}
+.fblock label{display:block;font-size:12.5px;font-weight:700;margin-bottom:8px;}
+.fblock label .opt{font-weight:400;color:var(--sub);margin-left:4px;}
+.move-btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.move-btn{padding:14px 10px;border-radius:14px;border:1.5px solid var(--line);background:var(--card);font-size:14px;cursor:pointer;text-align:center;font-weight:600;color:var(--sub);}
+.move-btn.on{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.stamps{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.stamp{padding:11px 10px;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-size:12.5px;cursor:pointer;text-align:left;display:flex;align-items:center;gap:8px;color:var(--ink);}
+.stamp .dot{width:8px;height:8px;border-radius:50%;background:var(--line);flex-shrink:0;transition:.15s;}
+.stamp.on{background:var(--green-soft);border-color:var(--green);}
+.stamp.on .dot{background:var(--green);}
+textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px 14px;font-size:13.5px;font-family:inherit;color:var(--ink);background:var(--card);resize:none;min-height:80px;line-height:1.65;}
+textarea:focus{outline:none;border-color:var(--green);}
+.form-note{text-align:center;font-size:11.5px;color:var(--sub);margin-bottom:10px;}
+.form-footer{padding:10px 18px 8px;}
+
+/* ── COMPLETE ── */
+.complete{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:30px;text-align:center;}
+.c-stamp{width:88px;height:88px;border-radius:50%;background:var(--green-soft);color:var(--green);font-size:42px;display:flex;align-items:center;justify-content:center;margin-bottom:20px;animation:pop .4s cubic-bezier(.2,1.5,.4,1);}
+@keyframes pop{from{transform:scale(.3);opacity:0;}to{transform:scale(1);opacity:1;}}
+.complete h2{font-size:18px;font-weight:800;margin:0 0 8px;}
+.complete p{font-size:13px;color:var(--sub);margin:0 0 24px;line-height:1.7;}
+.complete-btns{width:100%;display:flex;flex-direction:column;gap:10px;}
+
+/* ── HANDOFF ── */
+.target-bar{margin:4px 16px 0;background:var(--card);border-radius:14px;padding:14px;box-shadow:var(--sh);display:flex;align-items:center;gap:12px;}
+.target-bar .av{width:40px;height:40px;font-size:14px;}
+.target-bar .t{font-size:13.5px;font-weight:700;}
+.target-bar .t small{display:block;font-size:11px;color:var(--sub);font-weight:400;margin-top:2px;}
+.prio-btns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.prio{padding:11px 0;border-radius:12px;border:1.5px solid var(--line);background:var(--card);font-size:12.5px;font-weight:700;color:var(--sub);cursor:pointer;text-align:center;}
+.prio.on.lo{background:var(--green-soft);border-color:var(--green);color:var(--green);}
+.prio.on.mi{background:var(--gold-soft);border-color:#D4B86A;color:var(--gold);}
+.prio.on.hi{background:var(--terra-soft);border-color:#D4917A;color:var(--terra);}
+.tmpl{flex-shrink:0;font-size:12px;padding:8px 13px;border-radius:20px;background:var(--paper);border:1px solid var(--line);cursor:pointer;}
+
+/* toast */
+.toast{position:absolute;bottom:80px;left:50%;transform:translateX(-50%) translateY(8px);background:#302C27;color:#fff;font-size:12.5px;padding:9px 18px;border-radius:30px;opacity:0;pointer-events:none;transition:.22s;z-index:50;white-space:nowrap;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+</style>
+</head>
+<body>
+<div class="device" id="app">
+
+<!-- ======= HOME ======= -->
+<div class="screen active" data-s="home">
+  <div class="topbar">
+    <h1 style="text-align:left;margin:0;">てのひらメモ</h1>
+  </div>
+  <div class="scroll">
+    <div class="home-eyebrow">6月19日（木）の訪問</div>
+    <div class="home-title">今日の<span>担当患者さん</span></div>
+    <div class="patient-card" onclick="openPatient('kobayashi')">
+      <div class="av">小</div>
+      <div class="info">
+        <div class="name">小林 一郎さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">78歳</span></div>
+        <div class="onelineSummary">釣り好きで穏やか。右肩注意。</div>
+        <div class="place">🏠 さくら苑 201号室</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+    <div class="patient-card" onclick="openPatient('watanabe')">
+      <div class="av">渡</div>
+      <div class="info">
+        <div class="name">渡辺 とし子さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">84歳</span></div>
+        <div class="onelineSummary">お花と昔話が好き。腰に注意。</div>
+        <div class="place">🏠 緑町 ご自宅</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+    <div class="patient-card" onclick="openPatient('nakamura')">
+      <div class="av">中</div>
+      <div class="info">
+        <div class="name">中村 健二さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">71歳</span></div>
+        <div class="onelineSummary">阪神ファン。ニュース好き。</div>
+        <div class="place">🏠 ひまわり荘 305号室</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+    <div class="section-label">全患者一覧</div>
+    <div class="patient-card" onclick="openPatient('kimura')">
+      <div class="av">木</div>
+      <div class="info">
+        <div class="name">木村 文子さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">90歳</span></div>
+        <div class="onelineSummary">歌と映画が好き。一人暮らし。</div>
+        <div class="place">🏠 日当町 ご自宅</div>
+      </div>
+      <div class="chev">›</div>
+    </div>
+  </div>
+  <button class="fab" onclick="toast('患者を新規登録します（モック）')">＋</button>
+</div>
+
+<!-- ======= DETAIL ======= -->
+<div class="screen" data-s="detail">
+  <div class="topbar has-back lined">
+    <button class="backbtn" onclick="go('home')">‹</button>
+    <h1 id="d-title">患者メモ</h1>
+  </div>
+  <div class="scroll">
+    <div class="patient-hero">
+      <div class="av-lg" id="d-av">小</div>
+      <div class="hero-info">
+        <div class="hname" id="d-name">小林 一郎さん</div>
+        <div class="hsub" id="d-sub">78歳　週2回訪問</div>
+      </div>
+    </div>
+
+    <!-- ★ 一言サマリー -->
+    <div class="summary-banner">
+      <div class="sb-label">この人を一言で</div>
+      <div class="sb-text" id="d-summary"></div>
+    </div>
+
+    <!-- 訪問前チェックを見るボタン -->
+    <button class="check-cta" onclick="openPrecheck()">
+      <div class="cc-ic">📋</div>
+      <div class="cc-txt">
+        <div class="t1">訪問前チェックを見る</div>
+        <div class="t2">これだけ見れば訪問できます</div>
+      </div>
+      <div class="cc-arrow">›</div>
+    </button>
+
+    <!-- 施術の流れ -->
+    <div class="flow-card">
+      <div class="flow-card-head">
+        <div class="fc-label">施術の流れ</div>
+        <button class="flow-edit-btn" onclick="openFlowEdit()">編集</button>
+      </div>
+      <div id="d-flow-blocks"></div>
+    </div>
+
+    <!-- 会話サポート -->
+    <div class="talk-card">
+      <div class="tc-label">会話サポート</div>
+      <div class="talk-sub">💬 最近話した内容</div>
+      <div class="talk-row" id="d-recent-talk"></div>
+      <div class="talk-sub">✨ 次回聞くと喜びそうな話題</div>
+      <div class="talk-row" id="d-next-talk"></div>
+      <div class="talk-sub">👨‍👩‍👧 家族の近況</div>
+      <div class="family-row" id="d-family"></div>
+    </div>
+
+    <div class="rec-label">最近の記録</div>
+    <div id="d-records"></div>
+  </div>
+  <div class="actions">
+    <button class="btn outline" onclick="go('handoff')">引き継ぎ</button>
+    <button class="btn primary" onclick="go('form')">施術メモを追加</button>
+  </div>
+  <div style="height:10px;flex-shrink:0;"></div>
+</div>
+
+<!-- ======= PRE-VISIT CHECK（訪問前チェック全画面） ======= -->
+<div class="screen modal precheck" data-s="precheck">
+  <div class="topbar">
+    <div style="flex:1;"></div>
+    <button class="closebtn" onclick="go('detail')">×</button>
+  </div>
+  <div class="scroll">
+    <div class="pc-name" id="pc-name">小林 一郎さん</div>
+    <div class="pc-sub">訪問前にこれだけ確認</div>
+    <div class="pc-list" id="pc-list"></div>
+  </div>
+  <div class="pc-footer">
+    <button class="ready-btn" onclick="go('detail')">確認しました</button>
+  </div>
+</div>
+
+<!-- ======= FLOW EDIT ======= -->
+<div class="screen" data-s="flow-edit">
+  <div class="topbar has-back lined">
+    <button class="backbtn" onclick="go('detail')">‹</button>
+    <h1 id="fe-title">施術の流れを編集</h1>
+  </div>
+  <div class="scroll">
+    <div class="flow-edit-intro">
+      4つの場面ごとに、確認すること・気をつけることを登録してください。
+    </div>
+    <div class="flow-edit-group">
+      <div class="flow-edit-group-label">① 最初に確認すること</div>
+      <div class="flow-edit-row"><input class="flow-edit-input" id="fe-check" type="text" placeholder="例：顔色・声かけ"></div>
+    </div>
+    <div class="flow-edit-group">
+      <div class="flow-edit-group-label">② 施術する部位</div>
+      <div class="flow-edit-row"><input class="flow-edit-input" id="fe-area" type="text" placeholder="例：右肩→腰部→下肢"></div>
+    </div>
+    <div class="flow-edit-group">
+      <div class="flow-edit-group-label">③ 注意点</div>
+      <div class="flow-edit-row"><input class="flow-edit-input" id="fe-caution" type="text" placeholder="例：右肩は強く上げない"></div>
+    </div>
+    <div class="flow-edit-group">
+      <div class="flow-edit-group-label">④ 帰り際にすること</div>
+      <div class="flow-edit-row"><input class="flow-edit-input" id="fe-leave" type="text" placeholder="例：ご家族へ一言報告"></div>
+    </div>
+    <div style="height:20px;"></div>
+  </div>
+  <div class="form-footer">
+    <button class="btn primary w100" style="padding:15px;" onclick="saveFlow()">保存する</button>
+  </div>
+</div>
+
+<!-- ======= FORM ======= -->
+<div class="screen" data-s="form">
+  <div class="topbar has-back lined">
+    <button class="backbtn" onclick="go('detail')">‹</button>
+    <h1>施術メモを追加</h1>
+  </div>
+  <div class="scroll">
+    <div class="form-body">
+      <div class="fblock">
+        <label>今日の移動状況　<span class="opt">毎回確認</span></label>
+        <div class="move-btns">
+          <div class="move-btn on" id="mb-walk" onclick="selMove('walk')">🚶 自立歩行</div>
+          <div class="move-btn" id="mb-chair" onclick="selMove('chair')">🦽 車椅子</div>
+        </div>
+      </div>
+      <div class="fblock">
+        <label>今日話したこと・様子</label>
+        <div class="stamps" id="talk-stamps"></div>
+      </div>
+      <div class="fblock">
+        <label>今日の話・詳細 <span class="opt">任意</span></label>
+        <textarea id="f-talk" placeholder="どんな話をしたか、表情や様子など" rows="3"></textarea>
+      </div>
+      <div class="fblock">
+        <label>施術部位</label>
+        <div class="stamps">
+          <div class="stamp on" onclick="toggleStamp(this)"><span class="dot"></span>右肩</div>
+          <div class="stamp" onclick="toggleStamp(this)"><span class="dot"></span>腰部</div>
+          <div class="stamp" onclick="toggleStamp(this)"><span class="dot"></span>下肢</div>
+          <div class="stamp" onclick="toggleStamp(this)"><span class="dot"></span>頸部</div>
+        </div>
+      </div>
+      <div class="fblock">
+        <label>様子のクイックメモ</label>
+        <div class="stamps">
+          <div class="stamp" onclick="stampMemo(this,'改善傾向が見られた。')"><span class="dot"></span>改善傾向</div>
+          <div class="stamp" onclick="stampMemo(this,'現状維持。大きな変化なし。')"><span class="dot"></span>現状維持</div>
+          <div class="stamp" onclick="stampMemo(this,'いつもより痛みの訴えが強かった。')"><span class="dot"></span>痛み強め</div>
+          <div class="stamp" onclick="stampMemo(this,'ご家族が同席されていた。')"><span class="dot"></span>家族同席</div>
+        </div>
+      </div>
+      <div class="fblock">
+        <label>施術メモ</label>
+        <textarea id="f-memo" placeholder="次のスタッフへ伝えたいこと、気になった点など" rows="4"></textarea>
+      </div>
+      <div class="fblock">
+        <label style="display:flex;align-items:center;justify-content:space-between;">
+          引き継ぎが必要
+          <input type="checkbox" id="f-handoff" style="width:22px;height:22px;accent-color:var(--green);">
+        </label>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <div class="form-note">「引き継ぎが必要」にチェックすると次の画面で作成できます</div>
+    <button class="btn primary w100" style="padding:15px;" onclick="saveForm()">保存する</button>
+  </div>
+</div>
+
+<!-- ======= COMPLETE ======= -->
+<div class="screen" data-s="complete">
+  <div class="complete">
+    <div class="c-stamp">✓</div>
+    <h2>メモを保存しました</h2>
+    <p id="c-msg"></p>
+    <div class="complete-btns">
+      <button class="btn primary w100" onclick="go('detail')">患者メモを見る</button>
+      <button class="btn ghost w100" onclick="go('handoff')">引き継ぎメモを作成</button>
+      <button class="btn ghost w100" onclick="go('home')">ホームへ戻る</button>
+    </div>
+  </div>
+</div>
+
+<!-- ======= HANDOFF ======= -->
+<div class="screen" data-s="handoff">
+  <div class="topbar has-back lined">
+    <button class="backbtn" onclick="go('detail')">‹</button>
+    <h1>引き継ぎメモ</h1>
+  </div>
+  <div class="scroll">
+    <div class="section-label" style="padding-top:14px;">共有先</div>
+    <div class="target-bar">
+      <div class="av" id="h-av">小</div>
+      <div class="t" id="h-target">小林 一郎さん 担当チーム
+        <small>家族へ共有</small>
+      </div>
+    </div>
+    <div class="form-body">
+      <div class="fblock" style="margin-top:18px;">
+        <label>優先度</label>
+        <div class="prio-btns">
+          <div class="prio lo" onclick="selPrio(this,'lo')">共有のみ</div>
+          <div class="prio on mi" onclick="selPrio(this,'mi')">要確認</div>
+          <div class="prio hi" onclick="selPrio(this,'hi')">要対応</div>
+        </div>
+      </div>
+      <div class="fblock">
+        <label>よく使う文</label>
+        <div style="display:flex;gap:8px;overflow-x:auto;margin:0 -18px;padding:0 18px 8px;">
+          <div class="tmpl" onclick="insertTmpl('体調の変化についてご共有です。')">体調変化を共有</div>
+          <div class="tmpl" onclick="insertTmpl('ご家族からご要望がありました。')">家族からの要望</div>
+          <div class="tmpl" onclick="insertTmpl('次回の訪問日時についてご確認をお願いします。')">日程確認</div>
+        </div>
+      </div>
+      <div class="fblock">
+        <label>引き継ぎ内容</label>
+        <textarea id="h-memo" rows="6" placeholder="スタッフ・ご家族へ伝えたいこと"></textarea>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <button class="btn primary w100" style="padding:15px;" onclick="go('h-complete')">送信する</button>
+  </div>
+</div>
+
+<!-- ======= HANDOFF COMPLETE ======= -->
+<div class="screen" data-s="h-complete">
+  <div class="complete">
+    <div class="c-stamp" style="background:var(--gold-soft);color:var(--gold);">📨</div>
+    <h2>引き継ぎを送信しました</h2>
+    <p>ご家族・スタッフへ通知が届きます。<br>チームへの共有が完了しました。</p>
+    <div class="complete-btns">
+      <button class="btn primary w100" onclick="go('detail')">患者メモへ戻る</button>
+      <button class="btn ghost w100" onclick="go('home')">ホームへ戻る</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+</div>
+
+<script>
+const defaultPatients = {
+  kobayashi:{
+    av:'小', name:'小林 一郎さん', sub:'78歳　週2回訪問',
+    loc:'さくら苑 201号室', move:'自立歩行（見守り程度）',
+    summary:'釣り好きで穏やか。右肩注意。',
+    flow:{check:'体調確認・顔色を見て声かけ', area:'右肩 → 腰部 → 歩行確認', caution:'右肩を強く上げない。内出血しやすい。', leave:'施設スタッフへ一言報告'},
+    recentTalk:'前回、釣りの話で盛り上がり終始笑顔だった。',
+    nextTalk:'最近の天気・釣りに行きたいか聞いてみる',
+    family:'次男様が月1回面会に来られている。前回「最近顔色がいい」と話していたとのこと。',
+    talkStamps:['釣りの話','朝ドラの話','お孫さんの話','口数が少なめ'],
+    handoffNote:'施設スタッフへ共有',
+    records:[
+      {date:'6/15（月）',staff:'友子',talk:'釣りの話で盛り上がり、終始笑顔だった。',body:'右肩の動きがやや改善。ご本人「動かしやすくなった」と。',move:'🚶',tags:['改善傾向']},
+      {date:'6/12（金）',staff:'友子',talk:'朝ドラの感想を熱心に話してくださった。',body:'起床時のこわばりが続く。温罨法を実施後に施術。',move:'🚶',tags:[]},
+      {date:'6/9（火）',staff:'宮井',talk:'今日は口数が少なく、疲れた様子だった。',body:'転倒後で車椅子使用。やや不安そうな様子だったが施術中は穏やかに。',move:'🦽',tags:['要注意']},
+    ]
+  },
+  watanabe:{
+    av:'渡', name:'渡辺 とし子さん', sub:'84歳　週2回訪問',
+    loc:'緑町 ご自宅', move:'車椅子（介助）',
+    summary:'お花と昔話が好き。腰に注意。',
+    flow:{check:'体調確認・長女様へご挨拶', area:'腰部（圧迫骨折部位を避ける）→ 下肢', caution:'腰部に強い刺激は禁忌。圧迫骨折歴あり。', leave:'長女様へ今日の様子を共有'},
+    recentTalk:'前回、戦時中の話をされ真剣な表情だった。',
+    nextTalk:'庭のバラが咲いているか聞いてみる',
+    family:'長女様が毎回同席。自宅での自主トレ方法を知りたいとの要望あり。',
+    talkStamps:['お花の話','昔の話','歌謡曲','長女さんと話','口数が少なめ'],
+    handoffNote:'長女様へ共有',
+    records:[
+      {date:'6/14（日）',staff:'宮井',talk:'長女さんも一緒にバラの話で盛り上がった。',body:'腰部を中心に施術。圧迫骨折部位を避けて丁寧に実施。',move:'🦽',tags:['現状維持']},
+      {date:'6/11（木）',staff:'友子',talk:'戦時中の話をされ、真剣な表情だった。しっかり聞いた。',body:'下肢のむくみが強め。帰宅前に長女さんへ様子を共有した。',move:'🦽',tags:['引き継ぎ済']},
+    ]
+  },
+  nakamura:{
+    av:'中', name:'中村 健二さん', sub:'71歳　週1回訪問',
+    loc:'ひまわり荘 305号室', move:'歩行器使用（見守り）',
+    summary:'阪神ファン。ニュース好き。',
+    flow:{check:'体調確認・左半身の感覚確認', area:'左肩〜上肢 → 下肢・足首', caution:'左半身に感覚鈍麻あり、圧痛確認を丁寧に。', leave:'歩行器での動作確認、PTへの申し送り確認'},
+    recentTalk:'前回、阪神が勝った話をしたらとても喜んでくれた。',
+    nextTalk:'最近の試合結果・順位の話をしてみる',
+    family:'ご家族の情報は少なめ。施設のPTと連携中。',
+    talkStamps:['阪神の話','ニュースの話','仕事の思い出','口数が少なめ'],
+    handoffNote:'PTへ共有',
+    records:[
+      {date:'6/12（木）',staff:'友子',talk:'阪神が勝ったと伝えたらとても喜んでくれた。',body:'左肩・下肢中心に施術。感覚確認を都度実施。',move:'🚶',tags:['現状維持']},
+    ]
+  },
+  kimura:{
+    av:'木', name:'木村 文子さん', sub:'90歳　週3回訪問',
+    loc:'日当町 ご自宅', move:'車椅子（自走可）',
+    summary:'歌と映画が好き。一人暮らし。',
+    flow:{check:'体調確認・室温と顔色チェック', area:'全身（弱刺激）→ 下肢のむくみケア', caution:'皮膚が薄く圧迫に弱い。全体的に弱め刺激で。', leave:'一人暮らしのため、帰り際の声かけを丁寧に'},
+    recentTalk:'前回、美空ひばりの話で一緒に少し歌った。',
+    nextTalk:'好きな昭和映画の続きを聞いてみる',
+    family:'長男様が緊急連絡先。月1回程度の電話連絡あり。',
+    talkStamps:['映画の話','歌の話','庭・花の話','口数が少なめ'],
+    handoffNote:'長男様へ共有',
+    records:[
+      {date:'6/16（月）',staff:'宮井',talk:'美空ひばりの話になり、一緒に少し歌った。良い雰囲気だった。',body:'全身の筋緊張緩和を中心に。皮膚の乾燥が目立つ、次回確認。',move:'🦽',tags:['現状維持']},
+    ]
+  }
+};
+
+
+const STORAGE_KEY = 'tenohiraMemo.claude.v1';
+const DRAFT_KEY = 'tenohiraMemo.claude.drafts.v1';
+const CURRENT_KEY = 'tenohiraMemo.claude.currentPatient.v1';
+let patients = loadPatients();
+let drafts = loadDrafts();
+let cur = localStorage.getItem(CURRENT_KEY) || 'kobayashi';
+if(!patients[cur]) cur = Object.keys(patients)[0] || 'kobayashi';
+
+function loadPatients(){
+  try{
+    const saved = localStorage.getItem(STORAGE_KEY);
+    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultPatients));
+  }catch(e){
+    return JSON.parse(JSON.stringify(defaultPatients));
+  }
+}
+function savePatients(){
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(patients));
+}
+function loadDrafts(){
+  try{
+    return JSON.parse(localStorage.getItem(DRAFT_KEY) || '{}');
+  }catch(e){
+    return {};
+  }
+}
+function saveDrafts(){
+  drafts[cur] = {
+    talk: document.getElementById('f-talk')?.value || '',
+    memo: document.getElementById('f-memo')?.value || '',
+    handoff: document.getElementById('h-memo')?.value || '',
+    needHandoff: !!document.getElementById('f-handoff')?.checked
+  };
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+}
+function applyDraft(){
+  const d = drafts[cur] || {};
+  if(document.getElementById('f-talk')) document.getElementById('f-talk').value = d.talk || '';
+  if(document.getElementById('f-memo')) document.getElementById('f-memo').value = d.memo || '';
+  if(document.getElementById('f-handoff')) document.getElementById('f-handoff').checked = !!d.needHandoff;
+  if(document.getElementById('h-memo') && d.handoff) document.getElementById('h-memo').value = d.handoff;
+}
+function todayRecordDate(){
+  return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',weekday:'short'}).format(new Date());
+}
+
+
+function go(s){
+  const prev = document.querySelector('.screen.active');
+  const next = document.querySelector('[data-s="'+s+'"]');
+  if(!next || prev===next) return;
+  if(s === 'form' || s === 'handoff') applyDraft();
+  prev.classList.add('prev');
+  next.classList.add('active');
+  setTimeout(()=>prev.classList.remove('active','prev'), 320);
+  next.querySelector('.scroll')?.scrollTo(0,0);
+}
+
+function openPatient(key){
+  cur = key;
+  localStorage.setItem(CURRENT_KEY, cur);
+  const p = patients[key];
+  document.getElementById('d-av').textContent = p.av;
+  document.getElementById('d-name').textContent = p.name;
+  document.getElementById('d-sub').textContent = p.sub;
+  document.getElementById('d-title').textContent = p.name;
+  document.getElementById('d-summary').textContent = p.summary;
+
+  renderFlowBlocks();
+
+  document.getElementById('d-recent-talk').textContent = p.recentTalk;
+  document.getElementById('d-next-talk').textContent = p.nextTalk;
+  document.getElementById('d-family').textContent = p.family;
+
+  document.getElementById('d-records').innerHTML = p.records.map(r=>`
+    <div class="rec-card">
+      <div class="rec-head"><span class="rdate">${r.date}</span><span class="rstaff">担当：${r.staff}</span></div>
+      <div class="rec-talk">${r.talk}</div>
+      <div class="rec-body">${r.body}</div>
+      <div class="rec-foot">
+        <span class="pill move">${r.move} ${r.move==='🚶'?'自立歩行':'車椅子'}</span>
+        ${r.tags.map(t=>'<span class="pill">'+t+'</span>').join('')}
+      </div>
+    </div>`).join('');
+
+  document.getElementById('talk-stamps').innerHTML = p.talkStamps.map(t=>
+    `<div class="stamp" onclick="stampTalk(this,'${t}のことを話した。')"><span class="dot"></span>${t}</div>`
+  ).join('');
+
+  document.getElementById('h-av').textContent = p.av;
+  document.getElementById('h-target').innerHTML =
+    p.name + ' 担当チーム<small>' + p.handoffNote + '</small>';
+  document.getElementById('h-memo').value =
+    '（前回からの引き継ぎ事項）\n' + p.flow.caution;
+
+  go('detail');
+}
+
+function renderFlowBlocks(){
+  const f = patients[cur].flow;
+  document.getElementById('d-flow-blocks').innerHTML = `
+    <div class="flow-block">
+      <div class="flow-block-ic f1">①</div>
+      <div class="flow-block-body">
+        <div class="flow-block-label">最初に確認</div>
+        <div class="flow-block-txt">${f.check || '未登録'}</div>
+      </div>
+    </div>
+    <div class="flow-block">
+      <div class="flow-block-ic f2">②</div>
+      <div class="flow-block-body">
+        <div class="flow-block-label">施術する部位</div>
+        <div class="flow-block-txt">${f.area || '未登録'}</div>
+      </div>
+    </div>
+    <div class="flow-block">
+      <div class="flow-block-ic f3">③</div>
+      <div class="flow-block-body">
+        <div class="flow-block-label">注意点</div>
+        <div class="flow-block-txt">${f.caution || '未登録'}</div>
+      </div>
+    </div>
+    <div class="flow-block">
+      <div class="flow-block-ic f4">④</div>
+      <div class="flow-block-body">
+        <div class="flow-block-label">帰り際にすること</div>
+        <div class="flow-block-txt">${f.leave || '未登録'}</div>
+      </div>
+    </div>`;
+}
+
+function openFlowEdit(){
+  const p = patients[cur];
+  document.getElementById('fe-title').textContent = p.name + 'の流れ';
+  document.getElementById('fe-check').value = p.flow.check;
+  document.getElementById('fe-area').value = p.flow.area;
+  document.getElementById('fe-caution').value = p.flow.caution;
+  document.getElementById('fe-leave').value = p.flow.leave;
+  go('flow-edit');
+}
+
+function saveFlow(){
+  patients[cur].flow = {
+    check: document.getElementById('fe-check').value.trim(),
+    area: document.getElementById('fe-area').value.trim(),
+    caution: document.getElementById('fe-caution').value.trim(),
+    leave: document.getElementById('fe-leave').value.trim()
+  };
+  savePatients();
+  renderFlowBlocks();
+  go('detail');
+  toast('施術の流れを保存しました');
+}
+
+function openPrecheck(){
+  const p = patients[cur];
+  document.getElementById('pc-name').textContent = p.name;
+  const items = [];
+  if(p.flow.caution) items.push({ic:'⚠️',txt:p.flow.caution,warn:true});
+  items.push({ic: p.move.includes('車椅子')?'🦽':'🚶', txt:p.move, warn:false});
+  items.push({ic:'💭', txt:p.summary, warn:false});
+  if(p.nextTalk) items.push({ic:'✨', txt:'次回話題: '+p.nextTalk, warn:false});
+  if(p.flow.leave) items.push({ic:'📋', txt:p.flow.leave, warn:false});
+
+  document.getElementById('pc-list').innerHTML = items.map(it=>`
+    <div class="pc-item ${it.warn?'warn':''}">
+      <div class="pc-ic">${it.ic}</div>
+      <div class="pc-txt">${it.txt}</div>
+    </div>`).join('');
+  go('precheck');
+}
+
+function selMove(v){
+  document.getElementById('mb-walk').classList.toggle('on', v==='walk');
+  document.getElementById('mb-chair').classList.toggle('on', v==='chair');
+}
+function toggleStamp(el){ el.classList.toggle('on'); }
+function stampTalk(el, txt){
+  el.classList.toggle('on');
+  const ta = document.getElementById('f-talk');
+  if(el.classList.contains('on')) ta.value = ta.value ? ta.value+' '+txt : txt;
+}
+function stampMemo(el, txt){
+  el.classList.toggle('on');
+  const ta = document.getElementById('f-memo');
+  if(el.classList.contains('on')) ta.value = ta.value ? ta.value+' '+txt : txt;
+}
+function saveForm(){
+  const needHandoff = document.getElementById('f-handoff').checked;
+  const talk = document.getElementById('f-talk').value.trim();
+  const memo = document.getElementById('f-memo').value.trim();
+  const move = document.getElementById('mb-chair').classList.contains('on') ? '車椅子' : '自立歩行';
+  const tags = Array.from(document.querySelectorAll('[data-s="form"] .stamp.on')).map(el=>el.textContent.trim()).filter(Boolean);
+  if(needHandoff) tags.push('引き継ぎ必要');
+  patients[cur].records.unshift({
+    date: todayRecordDate(),
+    staff:'担当',
+    talk: talk || '会話メモなし',
+    body: memo || '施術メモなし',
+    move,
+    tags
+  });
+  patients[cur].recentTalk = talk || patients[cur].recentTalk;
+  savePatients();
+  drafts[cur] = {talk:'', memo:'', handoff:document.getElementById('h-memo').value || '', needHandoff:false};
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+  document.getElementById('c-msg').innerHTML =
+    patients[cur].name+'の<br>施術メモを追加しました。<br>お疲れさまでした。';
+  go('complete');
+  if(needHandoff) setTimeout(()=>go('handoff'), 1600);
+}
+function selPrio(el, cls){
+  document.querySelectorAll('.prio').forEach(p=>p.className='prio');
+  el.classList.add('on', cls);
+}
+function insertTmpl(txt){
+  const ta = document.getElementById('h-memo');
+  ta.value = ta.value ? ta.value+'\n'+txt : txt;
+  saveDrafts();
+}
+function toast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'), 2000);
+}
+
+function installPersistenceHooks(){
+  ['f-talk','f-memo','h-memo','f-handoff'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.addEventListener('input', saveDrafts);
+    if(el && el.type === 'checkbox') el.addEventListener('change', saveDrafts);
+  });
+}
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
+}
+window.addEventListener('load', ()=>{
+  installPersistenceHooks();
+  applyDraft();
+});
+</script>
+</body>
+</html>
