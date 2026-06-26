@@ -242,7 +242,7 @@ textarea:focus{outline:none;border-color:var(--green);}
       <div class="chev">›</div>
     </div>
   </div>
-  <button class="fab" onclick="toast('患者を新規登録します（モック）')">＋</button>
+  <button class="fab" onclick="openNewPatient()">＋</button>
 </div>
 
 <!-- ======= DETAIL ======= -->
@@ -319,6 +319,65 @@ textarea:focus{outline:none;border-color:var(--green);}
   </div>
   <div class="pc-footer">
     <button class="ready-btn" onclick="go('detail')">確認しました</button>
+  </div>
+</div>
+
+<!-- ======= NEW PATIENT ======= -->
+<div class="screen" data-s="new-patient">
+  <div class="topbar has-back lined">
+    <button class="backbtn" onclick="go('home')">‹</button>
+    <h1>患者を新規登録</h1>
+  </div>
+  <div class="scroll">
+    <div class="form-body">
+      <div class="fblock">
+        <label>呼び名</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-name" type="text" placeholder="例：小林さん"></div>
+      </div>
+      <div class="fblock">
+        <label>年齢</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-age" type="number" inputmode="numeric" placeholder="例：78"></div>
+      </div>
+      <div class="fblock">
+        <label>訪問場所</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-loc" type="text" placeholder="例：さくら苑"></div>
+      </div>
+      <div class="fblock">
+        <label>この人を一言で</label>
+        <textarea id="np-summary" rows="2" placeholder="例：釣り好きで穏やか。右肩注意。"></textarea>
+      </div>
+      <div class="fblock">
+        <label>移動状況</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-move" type="text" placeholder="例：杖歩行、見守り程度"></div>
+      </div>
+      <div class="fblock">
+        <label>注意点</label>
+        <textarea id="np-caution" rows="2" placeholder="例：右肩を強く上げない"></textarea>
+      </div>
+      <div class="fblock">
+        <label>施術の流れ</label>
+        <textarea id="np-flow" rows="3" placeholder="例：体調確認 → 腰 → 下肢 → 歩行確認"></textarea>
+      </div>
+      <div class="fblock">
+        <label>最近話した内容</label>
+        <textarea id="np-recent-talk" rows="2"></textarea>
+      </div>
+      <div class="fblock">
+        <label>次回聞くと喜びそうな話題</label>
+        <textarea id="np-next-talk" rows="2"></textarea>
+      </div>
+      <div class="fblock">
+        <label>家族の近況</label>
+        <textarea id="np-family" rows="2"></textarea>
+      </div>
+      <div class="fblock">
+        <label>会話スタンプ候補 <span class="opt">読点で区切る</span></label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-talk-stamps" type="text" placeholder="例：釣りの話、朝ドラの話、お孫さんの話"></div>
+      </div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <button class="btn primary w100" style="padding:15px;" onclick="saveNewPatient()">登録する</button>
   </div>
 </div>
 
@@ -596,11 +655,85 @@ function todayRecordDate(){
   return new Intl.DateTimeFormat('ja-JP',{month:'numeric',day:'numeric',weekday:'short'}).format(new Date());
 }
 
+function patientInitial(name){
+  return (name || '患').replace(/さん$/,'').slice(0,1);
+}
+
+function renderHome(){
+  const scroll = document.querySelector('[data-s="home"] .scroll');
+  let list = document.getElementById('patient-list');
+  if(!list){
+    list = document.createElement('div');
+    list.id = 'patient-list';
+    scroll.querySelectorAll('.patient-card,.section-label').forEach(el=>el.remove());
+    scroll.appendChild(list);
+  }
+  const keys = Object.keys(patients);
+  list.innerHTML = keys.map(key=>{
+    const p = patients[key];
+    return `
+      <div class="patient-card" onclick="openPatient('${key}')">
+        <div class="av">${p.av || patientInitial(p.name)}</div>
+        <div class="info">
+          <div class="name">${p.name}<span style="font-size:11px;font-weight:400;color:var(--sub)">${p.sub ? '　' + p.sub : ''}</span></div>
+          <div class="onelineSummary">${p.summary || ''}</div>
+          <div class="place">${p.loc || ''}</div>
+        </div>
+        <div class="chev">›</div>
+      </div>`;
+  }).join('');
+}
+
+function openNewPatient(){
+  ['np-name','np-age','np-loc','np-summary','np-move','np-caution','np-flow','np-recent-talk','np-next-talk','np-family','np-talk-stamps'].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.value = '';
+  });
+  go('new-patient');
+}
+
+function saveNewPatient(){
+  const name = document.getElementById('np-name').value.trim();
+  if(!name){
+    toast('呼び名を入力してください');
+    return;
+  }
+  const age = document.getElementById('np-age').value.trim();
+  const key = 'patient_' + Date.now();
+  const flowText = document.getElementById('np-flow').value.trim();
+  const caution = document.getElementById('np-caution').value.trim();
+  patients[key] = {
+    av: patientInitial(name),
+    name,
+    sub: age ? age + '歳' : '',
+    loc: document.getElementById('np-loc').value.trim(),
+    move: document.getElementById('np-move').value.trim(),
+    summary: document.getElementById('np-summary').value.trim(),
+    flow: {
+      check: '体調・表情・痛みを確認',
+      area: flowText,
+      caution,
+      leave: '必要なことを共有'
+    },
+    recentTalk: document.getElementById('np-recent-talk').value.trim(),
+    nextTalk: document.getElementById('np-next-talk').value.trim(),
+    family: document.getElementById('np-family').value.trim(),
+    talkStamps: document.getElementById('np-talk-stamps').value.split(/[、,]/).map(s=>s.trim()).filter(Boolean),
+    handoffNote: '共有',
+    records: []
+  };
+  savePatients();
+  renderHome();
+  openPatient(key);
+  toast('患者を登録しました');
+}
+
 
 function go(s){
   const prev = document.querySelector('.screen.active');
   const next = document.querySelector('[data-s="'+s+'"]');
   if(!next || prev===next) return;
+  if(s === 'home') renderHome();
   if(s === 'form' || s === 'handoff') applyDraft();
   prev.classList.add('prev');
   next.classList.add('active');
@@ -788,6 +921,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 window.addEventListener('load', ()=>{
+  renderHome();
   installPersistenceHooks();
   applyDraft();
 });
