@@ -1,4 +1,4 @@
-const CACHE_NAME = 'tenohira-memo-v4';
+const CACHE_NAME = 'tenohira-memo-v5';
 const ASSETS = [
   './',
   './index.html',

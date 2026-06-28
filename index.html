@@ -66,6 +66,9 @@ html,body{margin:0;padding:0;background:#1a1714;font-family:"Hiragino Sans","Hir
 /* ── DETAIL ── */
 .patient-hero{padding:18px 18px 14px;display:flex;align-items:center;gap:14px;}
 .patient-hero .flow-edit-btn{margin-left:auto;flex-shrink:0;}
+.weekday-picker{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;width:100%;}
+.weekday-btn{aspect-ratio:1;border:1.5px solid var(--line);border-radius:8px;background:var(--card);color:var(--sub);font-size:12px;font-weight:700;cursor:pointer;padding:0;}
+.weekday-btn.on{background:var(--green);border-color:var(--green);color:#fff;}
 .av-lg{width:56px;height:56px;border-radius:50%;background:var(--green-soft);color:var(--green);font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .hero-info .hname{font-size:18px;font-weight:800;margin-bottom:3px;}
 .hero-info .hsub{font-size:12px;color:var(--sub);}
@@ -314,7 +317,10 @@ textarea:focus{outline:none;border-color:var(--green);}
       </div>
       <div class="fblock">
         <label>訪問曜日</label>
-        <div class="flow-edit-row"><input class="flow-edit-input" id="np-visit-days" type="text" placeholder="例：月・木"></div>
+        <input id="np-visit-days" type="hidden">
+        <div class="weekday-picker" data-for="np-visit-days">
+          <button type="button" class="weekday-btn" data-day="月">月</button><button type="button" class="weekday-btn" data-day="火">火</button><button type="button" class="weekday-btn" data-day="水">水</button><button type="button" class="weekday-btn" data-day="木">木</button><button type="button" class="weekday-btn" data-day="金">金</button><button type="button" class="weekday-btn" data-day="土">土</button><button type="button" class="weekday-btn" data-day="日">日</button>
+        </div>
       </div>
       <div class="fblock">
         <label>訪問時間</label>
@@ -374,7 +380,7 @@ textarea:focus{outline:none;border-color:var(--green);}
       <div class="fblock"><label>呼び名</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-name" type="text"></div></div>
       <div class="fblock"><label>年齢</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-age" type="number" inputmode="numeric"></div></div>
       <div class="fblock"><label>訪問場所</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-loc" type="text"></div></div>
-      <div class="fblock"><label>訪問曜日</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-visit-days" type="text" placeholder="例：月・木"></div></div>
+      <div class="fblock"><label>訪問曜日</label><input id="pe-visit-days" type="hidden"><div class="weekday-picker" data-for="pe-visit-days"><button type="button" class="weekday-btn" data-day="月">月</button><button type="button" class="weekday-btn" data-day="火">火</button><button type="button" class="weekday-btn" data-day="水">水</button><button type="button" class="weekday-btn" data-day="木">木</button><button type="button" class="weekday-btn" data-day="金">金</button><button type="button" class="weekday-btn" data-day="土">土</button><button type="button" class="weekday-btn" data-day="日">日</button></div></div>
       <div class="fblock"><label>訪問時間</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-visit-time" type="time"></div></div>
       <div class="fblock"><label>訪問頻度</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-frequency" type="text" placeholder="例：週2回、隔週"></div></div>
       <div class="fblock"><label>この人を一言で</label><textarea id="pe-summary" rows="2"></textarea></div>
@@ -692,6 +698,31 @@ function visitSchedule(p){
   return [timing, p.frequency || ''].filter(Boolean).join('／');
 }
 
+function syncWeekdayPicker(id, value){
+  const input = document.getElementById(id);
+  const picker = document.querySelector(`.weekday-picker[data-for="${id}"]`);
+  if(!input || !picker) return;
+  const selected = ['月','火','水','木','金','土','日'].filter(day=>(value || '').includes(day));
+  input.value = selected.join('・');
+  picker.querySelectorAll('.weekday-btn').forEach(button=>{
+    const on = selected.includes(button.dataset.day);
+    button.classList.toggle('on', on);
+    button.setAttribute('aria-pressed', String(on));
+  });
+}
+
+function installWeekdayPickers(){
+  document.querySelectorAll('.weekday-picker').forEach(picker=>{
+    picker.querySelectorAll('.weekday-btn').forEach(button=>{
+      button.addEventListener('click', ()=>{
+        button.classList.toggle('on');
+        const selected = [...picker.querySelectorAll('.weekday-btn.on')].map(item=>item.dataset.day);
+        syncWeekdayPicker(picker.dataset.for, selected.join('・'));
+      });
+    });
+  });
+}
+
 function patientCardHtml(key){
   const p = patients[key];
   return `
@@ -723,20 +754,18 @@ function renderHome(){
   if(!keys.length){
     list.innerHTML = `
       <div class="empty-patients">
-        <div>まだ患者さんが登録されていません</div>
+        <div>本日の訪問はありません</div>
         <button class="btn outline" onclick="addSamplePatients()">サンプル患者を追加</button>
       </div>`;
     return;
   }
-  const todayKeys = keys.filter(key=>(patients[key].visitDays || '').includes(todayDay));
-  const otherKeys = keys.filter(key=>!todayKeys.includes(key));
+  const todayKeys = keys
+    .filter(key=>(patients[key].visitDays || '').includes(todayDay))
+    .sort((a,b)=>(patients[a].visitTime || '99:99').localeCompare(patients[b].visitTime || '99:99'));
   const todayHtml = todayKeys.length
     ? todayKeys.map(patientCardHtml).join('')
-    : '<div class="empty-patients" style="margin-top:4px;margin-bottom:22px;">今日の訪問予定はありません</div>';
-  const allHtml = otherKeys.length
-    ? '<div class="section-label">全患者一覧</div>' + otherKeys.map(patientCardHtml).join('')
-    : '';
-  list.innerHTML = todayHtml + allHtml;
+    : '<div class="empty-patients" style="margin-top:4px;margin-bottom:22px;">本日の訪問はありません</div>';
+  list.innerHTML = todayHtml;
 }
 
 function addSamplePatients(){
@@ -754,6 +783,7 @@ function openNewPatient(){
     const el = document.getElementById(id);
     if(el) el.value = '';
   });
+  syncWeekdayPicker('np-visit-days', '');
   go('new-patient');
 }
 
@@ -803,7 +833,7 @@ function openPatientEdit(){
   document.getElementById('pe-name').value = p.name || '';
   document.getElementById('pe-age').value = patientAge(p);
   document.getElementById('pe-loc').value = p.loc || '';
-  document.getElementById('pe-visit-days').value = p.visitDays || '';
+  syncWeekdayPicker('pe-visit-days', p.visitDays || '');
   document.getElementById('pe-visit-time').value = p.visitTime || '';
   document.getElementById('pe-frequency').value = p.frequency || '';
   document.getElementById('pe-summary').value = p.summary || '';
@@ -1049,6 +1079,7 @@ if('serviceWorker' in navigator){
   window.addEventListener('load', ()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));
 }
 window.addEventListener('load', ()=>{
+  installWeekdayPickers();
   renderHome();
   installPersistenceHooks();
   applyDraft();
