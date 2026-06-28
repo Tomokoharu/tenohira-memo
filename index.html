@@ -191,6 +191,9 @@ textarea:focus{outline:none;border-color:var(--green);}
 /* toast */
 .toast{position:absolute;bottom:80px;left:50%;transform:translateX(-50%) translateY(8px);background:#302C27;color:#fff;font-size:12.5px;padding:9px 18px;border-radius:30px;opacity:0;pointer-events:none;transition:.22s;z-index:50;white-space:nowrap;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.empty-patients{margin:30px 16px 0;text-align:center;color:var(--sub);font-size:13px;line-height:1.8;}
+.empty-patients .btn{margin-top:16px;padding:12px 18px;}
+.delete-patient{display:block;margin:24px auto 28px;border:0;background:none;color:var(--terra);font-size:12.5px;text-decoration:underline;cursor:pointer;padding:8px;}
 </style>
 </head>
 <body>
@@ -204,43 +207,7 @@ textarea:focus{outline:none;border-color:var(--green);}
   <div class="scroll">
     <div class="home-eyebrow">6月19日（木）の訪問</div>
     <div class="home-title">今日の<span>担当患者さん</span></div>
-    <div class="patient-card" onclick="openPatient('kobayashi')">
-      <div class="av">小</div>
-      <div class="info">
-        <div class="name">小林 一郎さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">78歳</span></div>
-        <div class="onelineSummary">釣り好きで穏やか。右肩注意。</div>
-        <div class="place">🏠 さくら苑 201号室</div>
-      </div>
-      <div class="chev">›</div>
-    </div>
-    <div class="patient-card" onclick="openPatient('watanabe')">
-      <div class="av">渡</div>
-      <div class="info">
-        <div class="name">渡辺 とし子さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">84歳</span></div>
-        <div class="onelineSummary">お花と昔話が好き。腰に注意。</div>
-        <div class="place">🏠 緑町 ご自宅</div>
-      </div>
-      <div class="chev">›</div>
-    </div>
-    <div class="patient-card" onclick="openPatient('nakamura')">
-      <div class="av">中</div>
-      <div class="info">
-        <div class="name">中村 健二さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">71歳</span></div>
-        <div class="onelineSummary">阪神ファン。ニュース好き。</div>
-        <div class="place">🏠 ひまわり荘 305号室</div>
-      </div>
-      <div class="chev">›</div>
-    </div>
-    <div class="section-label">全患者一覧</div>
-    <div class="patient-card" onclick="openPatient('kimura')">
-      <div class="av">木</div>
-      <div class="info">
-        <div class="name">木村 文子さん　<span style="font-size:11px;font-weight:400;color:var(--sub)">90歳</span></div>
-        <div class="onelineSummary">歌と映画が好き。一人暮らし。</div>
-        <div class="place">🏠 日当町 ご自宅</div>
-      </div>
-      <div class="chev">›</div>
-    </div>
+    <div id="patient-list"></div>
   </div>
   <button class="fab" onclick="openNewPatient()">＋</button>
 </div>
@@ -298,6 +265,7 @@ textarea:focus{outline:none;border-color:var(--green);}
 
     <div class="rec-label">最近の記録</div>
     <div id="d-records"></div>
+    <button class="delete-patient" onclick="deleteCurrentPatient()">この患者さんを削除</button>
   </div>
   <div class="actions">
     <button class="btn outline" onclick="go('handoff')">引き継ぎ</button>
@@ -546,7 +514,7 @@ textarea:focus{outline:none;border-color:var(--green);}
 </div>
 
 <script>
-const defaultPatients = {
+const samplePatients = {
   kobayashi:{
     av:'小', name:'小林 一郎さん', sub:'78歳　週2回訪問',
     loc:'さくら苑 201号室', move:'自立歩行（見守り程度）',
@@ -612,17 +580,24 @@ const defaultPatients = {
 const STORAGE_KEY = 'tenohiraMemo.claude.v1';
 const DRAFT_KEY = 'tenohiraMemo.claude.drafts.v1';
 const CURRENT_KEY = 'tenohiraMemo.claude.currentPatient.v1';
+const SAMPLE_MIGRATION_KEY = 'tenohiraMemo.samplesRemoved.v1';
 let patients = loadPatients();
 let drafts = loadDrafts();
-let cur = localStorage.getItem(CURRENT_KEY) || 'kobayashi';
-if(!patients[cur]) cur = Object.keys(patients)[0] || 'kobayashi';
+let cur = localStorage.getItem(CURRENT_KEY) || '';
+if(!patients[cur]) cur = Object.keys(patients)[0] || '';
 
 function loadPatients(){
   try{
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : JSON.parse(JSON.stringify(defaultPatients));
+    const loaded = saved ? JSON.parse(saved) : {};
+    if(!localStorage.getItem(SAMPLE_MIGRATION_KEY)){
+      ['kobayashi','watanabe','nakamura','kimura'].forEach(key=>delete loaded[key]);
+      localStorage.setItem(SAMPLE_MIGRATION_KEY, 'done');
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(loaded));
+    }
+    return loaded;
   }catch(e){
-    return JSON.parse(JSON.stringify(defaultPatients));
+    return {};
   }
 }
 function savePatients(){
@@ -669,6 +644,14 @@ function renderHome(){
     scroll.appendChild(list);
   }
   const keys = Object.keys(patients);
+  if(!keys.length){
+    list.innerHTML = `
+      <div class="empty-patients">
+        <div>まだ患者さんが登録されていません</div>
+        <button class="btn outline" onclick="addSamplePatients()">サンプル患者を追加</button>
+      </div>`;
+    return;
+  }
   list.innerHTML = keys.map(key=>{
     const p = patients[key];
     return `
@@ -682,6 +665,16 @@ function renderHome(){
         <div class="chev">›</div>
       </div>`;
   }).join('');
+}
+
+function addSamplePatients(){
+  const stamp = Date.now();
+  Object.entries(samplePatients).forEach(([key, patient])=>{
+    patients[`sample_${stamp}_${key}`] = JSON.parse(JSON.stringify(patient));
+  });
+  savePatients();
+  renderHome();
+  toast('サンプル患者を追加しました');
 }
 
 function openNewPatient(){
@@ -726,6 +719,21 @@ function saveNewPatient(){
   renderHome();
   openPatient(key);
   toast('患者を登録しました');
+}
+
+function deleteCurrentPatient(){
+  const p = patients[cur];
+  if(!p) return;
+  if(!confirm(`${p.name}を削除しますか？\n保存した施術記録も削除されます。`)) return;
+  delete patients[cur];
+  delete drafts[cur];
+  localStorage.setItem(DRAFT_KEY, JSON.stringify(drafts));
+  savePatients();
+  cur = Object.keys(patients)[0] || '';
+  if(cur) localStorage.setItem(CURRENT_KEY, cur);
+  else localStorage.removeItem(CURRENT_KEY);
+  go('home');
+  toast('患者を削除しました');
 }
 
 
