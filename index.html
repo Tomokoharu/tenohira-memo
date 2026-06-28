@@ -65,6 +65,7 @@ html,body{margin:0;padding:0;background:#1a1714;font-family:"Hiragino Sans","Hir
 
 /* ── DETAIL ── */
 .patient-hero{padding:18px 18px 14px;display:flex;align-items:center;gap:14px;}
+.patient-hero .flow-edit-btn{margin-left:auto;flex-shrink:0;}
 .av-lg{width:56px;height:56px;border-radius:50%;background:var(--green-soft);color:var(--green);font-weight:700;font-size:19px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
 .hero-info .hname{font-size:18px;font-weight:800;margin-bottom:3px;}
 .hero-info .hsub{font-size:12px;color:var(--sub);}
@@ -205,7 +206,7 @@ textarea:focus{outline:none;border-color:var(--green);}
     <h1 style="text-align:left;margin:0;">てのひらメモ</h1>
   </div>
   <div class="scroll">
-    <div class="home-eyebrow">6月19日（木）の訪問</div>
+    <div class="home-eyebrow" id="today-date"></div>
     <div class="home-title">今日の<span>担当患者さん</span></div>
     <div id="patient-list"></div>
   </div>
@@ -225,6 +226,7 @@ textarea:focus{outline:none;border-color:var(--green);}
         <div class="hname" id="d-name">小林 一郎さん</div>
         <div class="hsub" id="d-sub">78歳　週2回訪問</div>
       </div>
+      <button class="flow-edit-btn" onclick="openPatientEdit()">編集</button>
     </div>
 
     <!-- ★ 一言サマリー -->
@@ -311,6 +313,18 @@ textarea:focus{outline:none;border-color:var(--green);}
         <div class="flow-edit-row"><input class="flow-edit-input" id="np-loc" type="text" placeholder="例：さくら苑"></div>
       </div>
       <div class="fblock">
+        <label>訪問曜日</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-visit-days" type="text" placeholder="例：月・木"></div>
+      </div>
+      <div class="fblock">
+        <label>訪問時間</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-visit-time" type="time"></div>
+      </div>
+      <div class="fblock">
+        <label>訪問頻度</label>
+        <div class="flow-edit-row"><input class="flow-edit-input" id="np-frequency" type="text" placeholder="例：週2回、隔週"></div>
+      </div>
+      <div class="fblock">
         <label>この人を一言で</label>
         <textarea id="np-summary" rows="2" placeholder="例：釣り好きで穏やか。右肩注意。"></textarea>
       </div>
@@ -346,6 +360,33 @@ textarea:focus{outline:none;border-color:var(--green);}
   </div>
   <div class="form-footer">
     <button class="btn primary w100" style="padding:15px;" onclick="saveNewPatient()">登録する</button>
+  </div>
+</div>
+
+<!-- ======= PATIENT EDIT ======= -->
+<div class="screen" data-s="patient-edit">
+  <div class="topbar has-back lined">
+    <button class="backbtn" onclick="go('detail')">‹</button>
+    <h1>患者情報を編集</h1>
+  </div>
+  <div class="scroll">
+    <div class="form-body">
+      <div class="fblock"><label>呼び名</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-name" type="text"></div></div>
+      <div class="fblock"><label>年齢</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-age" type="number" inputmode="numeric"></div></div>
+      <div class="fblock"><label>訪問場所</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-loc" type="text"></div></div>
+      <div class="fblock"><label>訪問曜日</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-visit-days" type="text" placeholder="例：月・木"></div></div>
+      <div class="fblock"><label>訪問時間</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-visit-time" type="time"></div></div>
+      <div class="fblock"><label>訪問頻度</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-frequency" type="text" placeholder="例：週2回、隔週"></div></div>
+      <div class="fblock"><label>この人を一言で</label><textarea id="pe-summary" rows="2"></textarea></div>
+      <div class="fblock"><label>移動状況</label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-move" type="text"></div></div>
+      <div class="fblock"><label>最近話した内容</label><textarea id="pe-recent-talk" rows="2"></textarea></div>
+      <div class="fblock"><label>次回聞くと喜びそうな話題</label><textarea id="pe-next-talk" rows="2"></textarea></div>
+      <div class="fblock"><label>家族の近況</label><textarea id="pe-family" rows="2"></textarea></div>
+      <div class="fblock"><label>会話スタンプ候補 <span class="opt">読点で区切る</span></label><div class="flow-edit-row"><input class="flow-edit-input" id="pe-talk-stamps" type="text"></div></div>
+    </div>
+  </div>
+  <div class="form-footer">
+    <button class="btn primary w100" style="padding:15px;" onclick="savePatientEdit()">保存する</button>
   </div>
 </div>
 
@@ -517,6 +558,7 @@ textarea:focus{outline:none;border-color:var(--green);}
 const samplePatients = {
   kobayashi:{
     av:'小', name:'小林 一郎さん', sub:'78歳　週2回訪問',
+    age:'78', visitDays:'月・木', visitTime:'10:30', frequency:'週2回',
     loc:'さくら苑 201号室', move:'自立歩行（見守り程度）',
     summary:'釣り好きで穏やか。右肩注意。',
     flow:{check:'体調確認・顔色を見て声かけ', area:'右肩 → 腰部 → 歩行確認', caution:'右肩を強く上げない。内出血しやすい。', leave:'施設スタッフへ一言報告'},
@@ -533,6 +575,7 @@ const samplePatients = {
   },
   watanabe:{
     av:'渡', name:'渡辺 とし子さん', sub:'84歳　週2回訪問',
+    age:'84', visitDays:'火・金', visitTime:'13:30', frequency:'週2回',
     loc:'緑町 ご自宅', move:'車椅子（介助）',
     summary:'お花と昔話が好き。腰に注意。',
     flow:{check:'体調確認・長女様へご挨拶', area:'腰部（圧迫骨折部位を避ける）→ 下肢', caution:'腰部に強い刺激は禁忌。圧迫骨折歴あり。', leave:'長女様へ今日の様子を共有'},
@@ -548,6 +591,7 @@ const samplePatients = {
   },
   nakamura:{
     av:'中', name:'中村 健二さん', sub:'71歳　週1回訪問',
+    age:'71', visitDays:'木', visitTime:'15:00', frequency:'週1回',
     loc:'ひまわり荘 305号室', move:'歩行器使用（見守り）',
     summary:'阪神ファン。ニュース好き。',
     flow:{check:'体調確認・左半身の感覚確認', area:'左肩〜上肢 → 下肢・足首', caution:'左半身に感覚鈍麻あり、圧痛確認を丁寧に。', leave:'歩行器での動作確認、PTへの申し送り確認'},
@@ -562,6 +606,7 @@ const samplePatients = {
   },
   kimura:{
     av:'木', name:'木村 文子さん', sub:'90歳　週3回訪問',
+    age:'90', visitDays:'月・水・金', visitTime:'11:00', frequency:'週3回',
     loc:'日当町 ご自宅', move:'車椅子（自走可）',
     summary:'歌と映画が好き。一人暮らし。',
     flow:{check:'体調確認・室温と顔色チェック', area:'全身（弱刺激）→ 下肢のむくみケア', caution:'皮膚が薄く圧迫に弱い。全体的に弱め刺激で。', leave:'一人暮らしのため、帰り際の声かけを丁寧に'},
@@ -634,7 +679,38 @@ function patientInitial(name){
   return (name || '患').replace(/さん$/,'').slice(0,1);
 }
 
+function patientAge(p){
+  return p.age || ((p.sub || '').match(/(\d+)歳/) || [,''])[1];
+}
+
+function patientSub(p){
+  return [patientAge(p) ? patientAge(p) + '歳' : '', p.frequency ? p.frequency + '訪問' : ''].filter(Boolean).join('　');
+}
+
+function visitSchedule(p){
+  const timing = [p.visitDays || '', p.visitTime || ''].filter(Boolean).join(' ');
+  return [timing, p.frequency || ''].filter(Boolean).join('／');
+}
+
+function patientCardHtml(key){
+  const p = patients[key];
+  return `
+    <div class="patient-card" onclick="openPatient('${key}')">
+      <div class="av">${p.av || patientInitial(p.name)}</div>
+      <div class="info">
+        <div class="name">${p.name}<span style="font-size:11px;font-weight:400;color:var(--sub)">${patientAge(p) ? '　' + patientAge(p) + '歳' : ''}</span></div>
+        <div class="onelineSummary">${p.summary || ''}</div>
+        <div class="place">${visitSchedule(p) || '訪問予定 未登録'}${p.loc ? '　' + p.loc : ''}</div>
+      </div>
+      <div class="chev">›</div>
+    </div>`;
+}
+
 function renderHome(){
+  const now = new Date();
+  const weekdays = ['日','月','火','水','木','金','土'];
+  const todayDay = weekdays[now.getDay()];
+  document.getElementById('today-date').textContent = `${now.getMonth()+1}月${now.getDate()}日（${todayDay}）の訪問`;
   const scroll = document.querySelector('[data-s="home"] .scroll');
   let list = document.getElementById('patient-list');
   if(!list){
@@ -652,19 +728,15 @@ function renderHome(){
       </div>`;
     return;
   }
-  list.innerHTML = keys.map(key=>{
-    const p = patients[key];
-    return `
-      <div class="patient-card" onclick="openPatient('${key}')">
-        <div class="av">${p.av || patientInitial(p.name)}</div>
-        <div class="info">
-          <div class="name">${p.name}<span style="font-size:11px;font-weight:400;color:var(--sub)">${p.sub ? '　' + p.sub : ''}</span></div>
-          <div class="onelineSummary">${p.summary || ''}</div>
-          <div class="place">${p.loc || ''}</div>
-        </div>
-        <div class="chev">›</div>
-      </div>`;
-  }).join('');
+  const todayKeys = keys.filter(key=>(patients[key].visitDays || '').includes(todayDay));
+  const otherKeys = keys.filter(key=>!todayKeys.includes(key));
+  const todayHtml = todayKeys.length
+    ? todayKeys.map(patientCardHtml).join('')
+    : '<div class="empty-patients" style="margin-top:4px;margin-bottom:22px;">今日の訪問予定はありません</div>';
+  const allHtml = otherKeys.length
+    ? '<div class="section-label">全患者一覧</div>' + otherKeys.map(patientCardHtml).join('')
+    : '';
+  list.innerHTML = todayHtml + allHtml;
 }
 
 function addSamplePatients(){
@@ -678,7 +750,7 @@ function addSamplePatients(){
 }
 
 function openNewPatient(){
-  ['np-name','np-age','np-loc','np-summary','np-move','np-caution','np-flow','np-recent-talk','np-next-talk','np-family','np-talk-stamps'].forEach(id=>{
+  ['np-name','np-age','np-loc','np-visit-days','np-visit-time','np-frequency','np-summary','np-move','np-caution','np-flow','np-recent-talk','np-next-talk','np-family','np-talk-stamps'].forEach(id=>{
     const el = document.getElementById(id);
     if(el) el.value = '';
   });
@@ -698,8 +770,12 @@ function saveNewPatient(){
   patients[key] = {
     av: patientInitial(name),
     name,
+    age,
     sub: age ? age + '歳' : '',
     loc: document.getElementById('np-loc').value.trim(),
+    visitDays: document.getElementById('np-visit-days').value.trim(),
+    visitTime: document.getElementById('np-visit-time').value,
+    frequency: document.getElementById('np-frequency').value.trim(),
     move: document.getElementById('np-move').value.trim(),
     summary: document.getElementById('np-summary').value.trim(),
     flow: {
@@ -719,6 +795,50 @@ function saveNewPatient(){
   renderHome();
   openPatient(key);
   toast('患者を登録しました');
+}
+
+function openPatientEdit(){
+  const p = patients[cur];
+  if(!p) return;
+  document.getElementById('pe-name').value = p.name || '';
+  document.getElementById('pe-age').value = patientAge(p);
+  document.getElementById('pe-loc').value = p.loc || '';
+  document.getElementById('pe-visit-days').value = p.visitDays || '';
+  document.getElementById('pe-visit-time').value = p.visitTime || '';
+  document.getElementById('pe-frequency').value = p.frequency || '';
+  document.getElementById('pe-summary').value = p.summary || '';
+  document.getElementById('pe-move').value = p.move || '';
+  document.getElementById('pe-recent-talk').value = p.recentTalk || '';
+  document.getElementById('pe-next-talk').value = p.nextTalk || '';
+  document.getElementById('pe-family').value = p.family || '';
+  document.getElementById('pe-talk-stamps').value = (p.talkStamps || []).join('、');
+  go('patient-edit');
+}
+
+function savePatientEdit(){
+  const p = patients[cur];
+  const name = document.getElementById('pe-name').value.trim();
+  if(!p || !name){
+    toast('呼び名を入力してください');
+    return;
+  }
+  p.name = name;
+  p.av = patientInitial(name);
+  p.age = document.getElementById('pe-age').value.trim();
+  p.loc = document.getElementById('pe-loc').value.trim();
+  p.visitDays = document.getElementById('pe-visit-days').value.trim();
+  p.visitTime = document.getElementById('pe-visit-time').value;
+  p.frequency = document.getElementById('pe-frequency').value.trim();
+  p.sub = patientSub(p);
+  p.summary = document.getElementById('pe-summary').value.trim();
+  p.move = document.getElementById('pe-move').value.trim();
+  p.recentTalk = document.getElementById('pe-recent-talk').value.trim();
+  p.nextTalk = document.getElementById('pe-next-talk').value.trim();
+  p.family = document.getElementById('pe-family').value.trim();
+  p.talkStamps = document.getElementById('pe-talk-stamps').value.split(/[、,]/).map(s=>s.trim()).filter(Boolean);
+  savePatients();
+  openPatient(cur);
+  toast('患者情報を保存しました');
 }
 
 function deleteCurrentPatient(){
@@ -755,7 +875,7 @@ function openPatient(key){
   const p = patients[key];
   document.getElementById('d-av').textContent = p.av;
   document.getElementById('d-name').textContent = p.name;
-  document.getElementById('d-sub').textContent = p.sub;
+  document.getElementById('d-sub').textContent = patientSub(p);
   document.getElementById('d-title').textContent = p.name;
   document.getElementById('d-summary').textContent = p.summary;
 
